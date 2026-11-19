@@ -27,7 +27,6 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
 
     if expires_delta:
         expiration_time = now + expires_delta
-        )
     else:
         expiration_time = now + timedelta(
             minutes=ACCESS_TOKEN_EXPIRAION_TIME_IN_MINUTES
