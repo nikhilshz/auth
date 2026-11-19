@@ -1,8 +1,15 @@
+from datetime import UTC, datetime, timedelta
+
+import jwt
 from pwdlib import PasswordHash
+
+from settings import settings
 
 password_hash = PasswordHash.recommended()
 
 DUMMY_HASH = password_hash.hash("dummypassword")
+ACCESS_TOKEN_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRAION_TIME_IN_MINUTES = 10
 
 
 # Password generation and verification
@@ -12,3 +19,21 @@ def hash_password(plain_password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> str:
     return password_hash.verify(plain_password, hashed_password)
+
+
+# JWT GENERATION + ENCODING/DECODING
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+    now = datetime.now(UTC)
+
+    if expires_delta:
+        expiration_time = now + expires_delta
+        )
+    else:
+        expiration_time = now + timedelta(
+            minutes=ACCESS_TOKEN_EXPIRAION_TIME_IN_MINUTES
+        )
+
+    payload = {**data, "iat": now, "exp": expiration_time}
+    return jwt.encode(
+        payload=payload, key=settings.JWT_SECRET_KEY, algorithm=ACCESS_TOKEN_ALGORITHM
+    )
