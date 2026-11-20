@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, status
+from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 
@@ -11,7 +11,7 @@ from security import (
     DUMMY_HASH,
     create_access_token,
     create_refresh_token,
-    decode_access_token,
+    decode_token,
     hash_password,
     verify_password,
 )
@@ -37,7 +37,7 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    payload = decode_access_token(token)
+    payload = decode_token(token)
     if not payload:
         raise invalid_token_exception
 
@@ -113,6 +113,31 @@ def login(
 # @app.get("/test-token")
 # def test_token(token: Annotated[str, Depends(oauth2_scheme)]):
 #     return {"token": token}
+
+@app.post("/token/refresh")
+def refresh_token(session: SessionDep, refresh_token: Annotated[str, Body(embed=True)]):
+    invalid_exception_token = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
+    )
+
+    payload = decode_token(refresh_token)
+    if not payload:
+        raise invalid_exception_token
+
+    if payload.get("type") != "refresh":
+        raise invalid_exception_token
+
+    email = payload.get("sub")
+    if not email:
+        raise invalid_exception_token
+
+    user = session.exec(select(User).where(User.email == email)).first()
+    if not user:
+        raise invalid_exception_token
+
+    new_access_token = create_access_token(data={"sub": user.email})
+    return {"access_token": new_access_token, "token_type": "bearer"}
+
 
 user_router = APIRouter(dependencies= [Depends(get_current_user)], tags=["users"])
 

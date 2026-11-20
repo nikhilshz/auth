@@ -53,7 +53,7 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None) -> 
     )
 
 
-def decode_access_token(token: str) -> dict | None:
+def decode_token(token: str) -> dict | None:
     try:
         payload = jwt.decode(
             token, key=settings.JWT_SECRET_KEY, algorithms=[ACCESS_TOKEN_ALGORITHM]
