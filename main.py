@@ -1,14 +1,17 @@
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlmodel import select
 
 from database import SessionDep, create_db_and_tables
-from models import User, UserCreate, UserResponse, UserUpdate
+from models import RevokedSession, User, UserCreate, UserResponse, UserUpdate
 from security import (
     DUMMY_HASH,
+    REFRESH_TOKEN_EXPIRATION_TIME_IN_DAYS,
     create_access_token,
     create_refresh_token,
     decode_token,
@@ -38,10 +41,11 @@ def get_current_user(
     )
 
     payload = decode_token(token)
-    if not payload:
+    if not payload or payload.get("type") != "access":
         raise invalid_token_exception
 
-    if payload.get("type" !="access"):
+    session_id = payload.get("sid")
+    if not session_id or session.get(RevokedSession, session_id):
         raise invalid_token_exception
 
     email = payload.get("sub")
@@ -99,7 +103,7 @@ def login(
     if not verify_password(form_data.password, existing_user.hashed_password):
         raise credentials_exception
 
-    data={"sub": existing_user.email}
+    data = {"sub": existing_user.email, "sid": str(uuid4())}
     access_token = create_access_token(data=data)
     refresh_token = create_refresh_token(data=data)
 
@@ -121,10 +125,11 @@ def refresh_token(session: SessionDep, refresh_token: Annotated[str, Body(embed=
     )
 
     payload = decode_token(refresh_token)
-    if not payload:
+    if not payload or payload.get("type") != "refresh":
         raise invalid_exception_token
 
-    if payload.get("type") != "refresh":
+    session_id = payload.get("sid")
+    if not session_id or session.get(RevokedSession, session_id):
         raise invalid_exception_token
 
     email = payload.get("sub")
@@ -135,8 +140,53 @@ def refresh_token(session: SessionDep, refresh_token: Annotated[str, Body(embed=
     if not user:
         raise invalid_exception_token
 
-    new_access_token = create_access_token(data={"sub": user.email})
+    new_access_token = create_access_token(
+        data={"sub": user.email, "sid": session_id}
+    )
     return {"access_token": new_access_token, "token_type": "bearer"}
+
+
+@app.post("/logout")
+def logout(
+    session: SessionDep,
+    current_user: CurrentUser,
+    token: Annotated[str, Depends(oauth2_scheme)],
+):
+    payload = decode_token(token)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    session_id = payload.get("sid")
+    if (
+        not session_id
+        or payload.get("sub") != current_user.email
+        or session.get(RevokedSession, session_id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    now = datetime.now(UTC)
+    expired_sessions = session.exec(
+        select(RevokedSession).where(RevokedSession.expires_at <= now)
+    ).all()
+    for expired_session in expired_sessions:
+        session.delete(expired_session)
+
+    session.add(
+        RevokedSession(
+            session_id=session_id,
+            expires_at=now + timedelta(days=REFRESH_TOKEN_EXPIRATION_TIME_IN_DAYS),
+        )
+    )
+    session.commit()
+    return {"detail": "Logged out"}
 
 
 user_router = APIRouter(dependencies= [Depends(get_current_user)], tags=["users"])

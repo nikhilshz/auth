@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import EmailStr
 from sqlmodel import Field, SQLModel
 
@@ -14,6 +16,13 @@ class User(SQLModel, table=True):
     email: EmailStr = Field(unique=True, index=True)
     hashed_password: str
     role: str = Field(default="user")
+
+
+class RevokedSession(SQLModel, table=True):
+    __tablename__: str = "revoked_sessions"
+
+    session_id: str = Field(primary_key=True)
+    expires_at: datetime
 
 
 class UserUpdate(SQLModel):
