@@ -33,3 +33,17 @@ class UserResponse(SQLModel):
     id: int
     email: str
     role: str
+
+
+class PasswordResetRequest(SQLModel):
+    email: EmailStr
+
+
+class PasswordResetToken(SQLModel, table=True):
+    __tablename__: str = "password_reset_token"
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    token: str = Field(unique=True, index=True)
+    expires_at: datetime
+    used: bool = Field(default=False)
