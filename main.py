@@ -236,7 +236,7 @@ def request_password_reset(session: SessionDep, payload: PasswordResetRequest):
         "message": "If an account exists with this email, a reset link has been sent"
     }
 
-    user = session.exec(select(User).where(User.email == payload.email))
+    user = session.exec(select(User).where(User.email == payload.email)).first()
     if not user or not user.id:
         return message
 
