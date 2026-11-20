@@ -10,6 +10,7 @@ from models import User, UserCreate, UserResponse, UserUpdate
 from security import (
     DUMMY_HASH,
     create_access_token,
+    create_refresh_token,
     decode_access_token,
     hash_password,
     verify_password,
@@ -38,6 +39,9 @@ def get_current_user(
 
     payload = decode_access_token(token)
     if not payload:
+        raise invalid_token_exception
+
+    if payload.get("type" !="access"):
         raise invalid_token_exception
 
     email = payload.get("sub")
@@ -95,9 +99,15 @@ def login(
     if not verify_password(form_data.password, existing_user.hashed_password):
         raise credentials_exception
 
-    access_token = create_access_token(data={"sub": existing_user.email})
+    data={"sub": existing_user.email}
+    access_token = create_access_token(data=data)
+    refresh_token = create_refresh_token(data=data)
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token, 
+        "refresh_token": refresh_token, 
+        "token_type": "bearer",
+    }
 
 
 # @app.get("/test-token")
