@@ -47,3 +47,8 @@ class PasswordResetToken(SQLModel, table=True):
     token: str = Field(unique=True, index=True)
     expires_at: datetime
     used: bool = Field(default=False)
+
+
+class PasswordResetConfirm(SQLModel):
+    token: str
+    new_password: str = Field(min_length=1, max_length=12)
