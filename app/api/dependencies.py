@@ -11,30 +11,42 @@ from app.models import RevokedSession, User
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-def get_current_user(
-    session: SessionDep, token: Annotated[str, Depends(oauth2_scheme)]
-):
-    invalid_token_exception = HTTPException(
+def _invalid_token_exception() -> HTTPException:
+    return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid token",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+
+def get_access_token_payload(
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> dict:
     payload = decode_token(token)
-    if not payload or payload.get("type") != "access":
-        raise invalid_token_exception
+    if (
+        not payload
+        or payload.get("type") != "access"
+        or not payload.get("sid")
+        or not payload.get("sub")
+    ):
+        raise _invalid_token_exception()
 
-    session_id = payload.get("sid")
+    return payload
+
+
+AccessTokenPayload = Annotated[dict, Depends(get_access_token_payload)]
+
+
+def get_current_user(session: SessionDep, payload: AccessTokenPayload):
+
+    session_id = payload["sid"]
     if not session_id or session.get(RevokedSession, session_id):
-        raise invalid_token_exception
+        raise _invalid_token_exception()
 
-    email = payload.get("sub")
-    if not email:
-        raise invalid_token_exception
-
+    email = payload["sub"]
     user = session.exec(select(User).where(User.email == email)).first()
     if not user:
-        raise invalid_token_exception
+        raise _invalid_token_exception()
 
     return user
 

@@ -9,7 +9,7 @@ password_hash = PasswordHash.recommended()
 
 DUMMY_HASH = password_hash.hash("dummypassword")
 ACCESS_TOKEN_ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRAION_TIME_IN_MINUTES = 10
+ACCESS_TOKEN_EXPIRATION_TIME_IN_MINUTES = 10
 REFRESH_TOKEN_EXPIRATION_TIME_IN_DAYS = 7
 
 
@@ -17,7 +17,7 @@ def hash_password(plain_password: str) -> str:
     return password_hash.hash(plain_password)
 
 
-def verify_password(plain_password: str, hashed_password: str) -> str:
+def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_hash.verify(plain_password, hashed_password)
 
 
@@ -28,7 +28,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
         expiration_time = now + expires_delta
     else:
         expiration_time = now + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRAION_TIME_IN_MINUTES
+            minutes=ACCESS_TOKEN_EXPIRATION_TIME_IN_MINUTES
         )
 
     payload = {**data, "iat": now, "exp": expiration_time, "type": "access"}

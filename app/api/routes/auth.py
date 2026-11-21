@@ -6,7 +6,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import select
 
-from app.api.dependencies import CurrentUser, oauth2_scheme
+from app.api.dependencies import AccessTokenPayload, CurrentUser
 from app.core.security import (
     DUMMY_HASH,
     REFRESH_TOKEN_EXPIRATION_TIME_IN_DAYS,
@@ -107,22 +107,10 @@ def refresh_token(session: SessionDep, refresh_token: Annotated[str, Body(embed=
 def logout(
     session: SessionDep,
     current_user: CurrentUser,
-    token: Annotated[str, Depends(oauth2_scheme)],
+    payload: AccessTokenPayload,
 ):
-    payload = decode_token(token)
-    if not payload or payload.get("type") != "access":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    session_id = payload.get("sid")
-    if (
-        not session_id
-        or payload.get("sub") != current_user.email
-        or session.get(RevokedSession, session_id)
-    ):
+    session_id = payload["sid"]
+    if payload["sub"] != current_user.email:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
