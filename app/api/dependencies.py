@@ -8,7 +8,14 @@ from app.core.security import decode_token
 from app.db.session import SessionDep
 from app.models import RevokedSession, User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="token",
+    scopes={
+        "read:users": "Read user records",
+        "write:users": "Write user records",
+        "delete:users": "Delete user records",
+    },
+)
 
 
 def _invalid_token_exception() -> HTTPException:
