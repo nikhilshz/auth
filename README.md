@@ -1,39 +1,57 @@
-# Authentication API
+# FastAPI Authentication
 
-## Run locally
+A small FastAPI authentication API with JWT access and refresh tokens, logout invalidation, password reset, and SQLite persistence.
 
-Requires Python 3.14 or newer and `uv`.
+## Features
 
-1. Install dependencies with `uv sync`.
-2. Set `JWT_SECRET_KEY` in the root `.env` file.
-3. Start the development server from the repository root:
+- User registration and login
+- Access and refresh tokens
+- Protected `/me` and dashboard routes
+- Session-based logout revocation
+- Password reset request and confirmation
+- Argon2 password hashing
+- Automatic Swagger and ReDoc API documentation
 
-	 ```powershell
-	 uv run fastapi dev app/main.py
-	 ```
+## Requirements
 
-The API documentation is available at `/docs`. The SQLite database is created as
-`auth.db` in the working directory on startup.
+- Python 3.14+
+- `uv`
 
-## Project layout
+## Setup
 
-```text
-app/
-	api/
-		dependencies.py
-		routes/
-			auth.py
-			password_reset.py
-			users.py
-	core/
-		config.py
-		security.py
-	db/
-		session.py
-	main.py
-	models.py
-	schemas.py
+1. Install dependencies:
+
+```powershell
+uv sync
 ```
 
-Route modules own HTTP endpoints, `models.py` contains database tables, and
-`schemas.py` contains request and response models.
+2. Create a `.env` file in the project root:
+
+```env
+JWT_SECRET_KEY=replace-this-with-a-long-random-secret
+```
+
+Generate a secret with:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+The SQLite database is created automatically as `auth.db` on startup.
+
+## Main Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/register` | Register a user |
+| `POST` | `/token` | Log in and receive tokens |
+| `POST` | `/token/refresh` | Create a new access token |
+| `POST` | `/logout` | Revoke the current login session |
+| `GET` | `/me` | Get the authenticated user |
+| `PATCH` | `/me` | Update the authenticated user's email |
+| `GET` | `/dashboard` | Protected example route |
+| `POST` | `/password-reset/request` | Request a password reset |
+| `POST` | `/password-reset/confirm` | Confirm a password reset |
+
+
+Routes are organized by feature, database tables live in `models.py`, request and response models live in `schemas.py`, and shared JWT/password utilities live in `app/core`.
