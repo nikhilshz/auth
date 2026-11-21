@@ -1,7 +1,7 @@
 from typing import Annotated, Literal
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes
 from sqlmodel import select
 
 from app.core.security import decode_token
@@ -49,6 +49,25 @@ def get_current_user(session: SessionDep, payload: AccessTokenPayload):
         raise _invalid_token_exception()
 
     return user
+
+
+def get_current_user_with_scope_check(
+    current_user: Annotated[User, Depends(get_current_user)],
+    token: Annotated[str, Depends(oauth2_scheme)],
+    security_scopes: SecurityScopes,
+) -> User:
+    payload = decode_token(token)
+    user_scopes = payload.get("scopes", [])
+
+    for scope in security_scopes.scopes:
+        if scope not in user_scopes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+                headers={"WWW-Authentication": "bearer"},
+            )
+
+    return current_user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
