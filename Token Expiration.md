@@ -5,6 +5,8 @@ A JWT contains an `exp` claim that defines when the token becomes invalid.
 ## Default expiration
 
 ```python
+from app.core.security import create_access_token
+
 token = create_access_token({"sub": "nik@example.com"})
 ```
 
@@ -14,6 +16,7 @@ Without `expires_delta`, the token expires after 10 minutes.
 
 ```python
 from datetime import timedelta
+from app.core.security import create_access_token
 
 token = create_access_token(
     {"sub": "nik@example.com"},
@@ -34,6 +37,9 @@ The payload contains Unix timestamps:
 ## Decoding
 
 ```python
+from app.core.config import settings
+from app.core.security import ACCESS_TOKEN_ALGORITHM
+
 jwt.decode(
     token,
     settings.JWT_SECRET_KEY,

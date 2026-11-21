@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 import jwt
 from pwdlib import PasswordHash
 
-from settings import settings
+from app.core.config import settings
 
 password_hash = PasswordHash.recommended()
 
@@ -13,7 +13,6 @@ ACCESS_TOKEN_EXPIRAION_TIME_IN_MINUTES = 10
 REFRESH_TOKEN_EXPIRATION_TIME_IN_DAYS = 7
 
 
-# Password generation and verification
 def hash_password(plain_password: str) -> str:
     return password_hash.hash(plain_password)
 
@@ -22,7 +21,6 @@ def verify_password(plain_password: str, hashed_password: str) -> str:
     return password_hash.verify(plain_password, hashed_password)
 
 
-# JWT GENERATION + ENCODING/DECODING
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     now = datetime.now(UTC)
 

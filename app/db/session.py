@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlmodel import Session, SQLModel, create_engine
 
-import models
+import app.models  # Register table models with SQLModel metadata.
 
 engine = create_engine("sqlite:///auth.db")
 
