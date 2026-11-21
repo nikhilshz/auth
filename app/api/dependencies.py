@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -52,3 +52,17 @@ def get_current_user(session: SessionDep, payload: AccessTokenPayload):
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+Role = Literal["user", "admin"]
+
+
+class RoleRequired:
+    def __init__(self, role: Role):
+        self.role = role
+
+    def __call__(self, current_user: CurrentUser):
+        if current_user.role != self.role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"This action requires the '{self.role}' role",
+            )
